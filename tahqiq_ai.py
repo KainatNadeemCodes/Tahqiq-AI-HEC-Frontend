@@ -986,28 +986,24 @@ h1,h2,h3,h4,h5,h6,p,span,label,div,a,li,td,th {
 # Helper: extract confidence level from XAI explanation text
 # ─────────────────────────────────────────────────────────────────────────────
 def _parse_confidence(xai_text: str):
-    """Pull Confidence % and level out of the XAI string."""
     import re
     m = re.search(r'Confidence:\s*(\d+)%\s*\((\w+)\)', xai_text)
     if m:
-        return int(m.group(1)), m.group(2).lower()
+        return int(m.group(1)), html.escape(m.group(2).lower())
     return None, None
 
 
 def _clean_xai(xai_text: str) -> str:
-    """Strip the appended '| Confidence:… | Next steps:…' suffix for cleaner display."""
-    # Split on ' | Confidence' and take only the first part
     parts = xai_text.split(' | Confidence:')
-    return parts[0].strip() if parts else xai_text
-
+    clean = parts[0].strip() if parts else xai_text
+    return html.escape(clean)
 
 def _get_next_steps(xai_text: str) -> list:
-    """Extract next steps list from the appended suffix."""
     import re
     m = re.search(r'Next steps: (.+)$', xai_text)
     if m:
         raw = m.group(1)
-        return [s.strip() for s in raw.split(';') if s.strip()]
+        return [html.escape(s.strip()) for s in raw.split(';') if s.strip()]
     return []
 
 
