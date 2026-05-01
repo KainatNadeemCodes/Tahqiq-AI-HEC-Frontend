@@ -24,7 +24,6 @@ import os
 import time
 import requests
 import streamlit as st
-import html
 
 # Optional: streamlit_lottie
 try:
@@ -862,6 +861,38 @@ h1,h2,h3,h4,h5,h6,p,span,label,div,a,li,td,th {
 .t-pill:hover { background: rgba(249,115,22,0.18); }
 
 /* ══════════════════════════════════════════════
+   NEXT STEPS BLOCK (inside result card)
+══════════════════════════════════════════════ */
+.t-next-steps-wrap {
+    margin-top: 0.75rem;
+    margin-bottom: 0.5rem;
+}
+.t-next-steps-lbl {
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: var(--orange);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 0.4rem;
+}
+.t-next-step-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+    padding: 0.4rem 0;
+    font-size: 0.82rem;
+    color: var(--text-2);
+    border-bottom: 1px solid var(--border);
+    word-break: break-word;
+}
+.t-next-step-icon {
+    color: var(--orange);
+    font-size: 0.7rem;
+    margin-top: 3px;
+    flex-shrink: 0;
+}
+
+/* ══════════════════════════════════════════════
    HOW IT WORKS
 ══════════════════════════════════════════════ */
 .t-steps {
@@ -986,24 +1017,28 @@ h1,h2,h3,h4,h5,h6,p,span,label,div,a,li,td,th {
 # Helper: extract confidence level from XAI explanation text
 # ─────────────────────────────────────────────────────────────────────────────
 def _parse_confidence(xai_text: str):
+    """Pull Confidence % and level out of the XAI string."""
     import re
     m = re.search(r'Confidence:\s*(\d+)%\s*\((\w+)\)', xai_text)
     if m:
-        return int(m.group(1)), html.escape(m.group(2).lower())
+        return int(m.group(1)), m.group(2).lower()
     return None, None
 
 
 def _clean_xai(xai_text: str) -> str:
+    """Strip the appended '| Confidence:… | Next steps:…' suffix for cleaner display."""
+    # Split on ' | Confidence' and take only the first part
     parts = xai_text.split(' | Confidence:')
-    clean = parts[0].strip() if parts else xai_text
-    return html.escape(clean)
+    return parts[0].strip() if parts else xai_text
+
 
 def _get_next_steps(xai_text: str) -> list:
+    """Extract next steps list from the appended suffix."""
     import re
     m = re.search(r'Next steps: (.+)$', xai_text)
     if m:
         raw = m.group(1)
-        return [html.escape(s.strip()) for s in raw.split(';') if s.strip()]
+        return [s.strip() for s in raw.split(';') if s.strip()]
     return []
 
 
@@ -1431,18 +1466,19 @@ if submit:
                 steps_html = ""
                 if next_steps:
                     step_items = "".join(
-                        f'<div style="display:flex;align-items:flex-start;gap:0.5rem;padding:0.4rem 0;font-size:0.82rem;color:var(--text-2);border-bottom:1px solid var(--border);">'
-                        f'<i class="fas fa-arrow-right" style="color:var(--orange);font-size:0.7rem;margin-top:3px;flex-shrink:0;"></i>'
-                        f'<span style="word-break:break-word;">{s}</span></div>'
+                        f'<div class="t-next-step-item">'
+                        f'<i class="fas fa-arrow-right t-next-step-icon"></i>'
+                        f'<span>{s}</span></div>'
                         for s in next_steps[:3]
                     )
-                    steps_html = f"""
-                    <div style="margin-top:0.75rem;margin-bottom:0.5rem;">
-                        <div style="font-size:0.72rem;font-weight:700;color:var(--orange);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.4rem;">
-                            <i class="fas fa-list-check"></i>&nbsp; Agle Qadam (Next Steps)
-                        </div>
-                        {step_items}
-                    </div>"""
+                    steps_html = (
+                        '<div class="t-next-steps-wrap">'
+                        '<div class="t-next-steps-lbl">'
+                        '<i class="fas fa-list-check"></i>&nbsp; Agle Qadam (Next Steps)'
+                        '</div>'
+                        + step_items +
+                        '</div>'
+                    )
 
                 # Metric bar widths
                 afford_w = metrics.get('affordability_score', 0)
