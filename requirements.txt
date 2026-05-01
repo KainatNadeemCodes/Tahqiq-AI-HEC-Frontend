@@ -1,0 +1,16 @@
+# Tahqiq.ai — requirements_streamlit.txt
+# For the Streamlit Cloud frontend deployment ONLY.
+# The backend (Hugging Face Spaces) uses requirements.txt which has
+# FastAPI, LangChain, ChromaDB, sentence-transformers, etc.
+#
+# This file stays deliberately lightweight — Streamlit Cloud has a
+# 1 GB RAM limit and a slow cold-start if deps are too heavy.
+
+# ── Core ──────────────────────────────────────────────────────────────────────
+streamlit==1.41.0
+
+# ── HTTP client — calls the HF Spaces FastAPI backend ─────────────────────────
+requests==2.32.3
+
+# ── Animations (Required for the Hero section) ────
+streamlit-lottie==0.0.5
