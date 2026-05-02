@@ -123,6 +123,23 @@ st.markdown("""
 }
 
 /* ══════════════════════════════════════════════
+   STREAMLIT CONTAINER OVERRIDES FOR HERO
+   Streamlit wraps markdown in [data-testid="stMarkdownContainer"]
+   which defaults to left-align — force center inside hero
+══════════════════════════════════════════════ */
+.t-hero [data-testid="stMarkdownContainer"],
+.t-hero .stMarkdown,
+.t-hero > div,
+.t-hero > div > div {
+    text-align: center !important;
+    width: 100% !important;
+    display: block !important;
+}
+.t-hero p, .t-hero h1, .t-hero h2, .t-hero span {
+    text-align: center !important;
+}
+
+/* ══════════════════════════════════════════════
    BASE
 ══════════════════════════════════════════════ */
 html, body, .stApp, .stAppViewContainer, [data-testid="stAppViewContainer"] {
@@ -354,17 +371,12 @@ h1,h2,h3,h4,h5,h6,p,span,label,div,a,li,td,th {
     color: var(--text) !important;
     margin-bottom: 0.6rem;
     animation: fade-up 0.55s ease-out 0.14s both;
-    text-align: center;
-    width: 100%;
 }
 .t-sub {
     font-size: 1rem; color: var(--text-2) !important;
     max-width: 600px; margin: 0 auto 2.5rem;
     line-height: 1.78;
     animation: fade-up 0.55s ease-out 0.21s both;
-    text-align: center;
-    display: block;
-    width: 100%;
 }
 .t-hero-btns {
     display: flex; justify-content: center; gap: 1rem; flex-wrap: wrap;
@@ -1076,12 +1088,18 @@ st.markdown("""
     </div>
     <div style="font-size:3.2rem;margin-bottom:1.2rem;animation:float 3s ease-in-out infinite;">🎓</div>
     <h1 class="t-h1">TAHQIQ AI</h1>
-    <p class="t-tagline">Har Student Ka Apna University Guide</p>
-    <p class="t-sub">
-        Pakistan's first Explainable University Intelligence System.
-        Type your question in Urdish — get ranked recommendations backed by
-        real HEC data, with transparent confidence scores. Free. Forever.
-    </p>
+    <div style="width:100%;display:flex;justify-content:center;align-items:center;">
+        <p class="t-tagline" style="text-align:center;margin:0 auto 0.6rem auto;width:100%;">
+            Har Student Ka Apna University Guide
+        </p>
+    </div>
+    <div style="width:100%;display:flex;justify-content:center;align-items:center;">
+        <p class="t-sub" style="text-align:center;margin:0 auto 2.5rem auto;max-width:600px;display:block;">
+            Pakistan's first Explainable University Intelligence System.
+            Type your question in Urdish — get ranked recommendations backed by
+            real HEC data, with transparent confidence scores. Free. Forever.
+        </p>
+    </div>
     <div class="t-hero-btns">
         <a href="#demo" class="t-btn-p">
             <i class="fas fa-search"></i> Find My University
@@ -1385,8 +1403,8 @@ if submit:
                 <p>Marks detected from your image: <strong>{ocr['marks_percent']}%</strong>{board_str}{year_str}</p>
             </div>""", unsafe_allow_html=True)
 
-        # Data warning — skip for off_topic (shown in dedicated card below)
-        if data.get("data_warning") and status != "off_topic":
+        # Data warning
+        if data.get("data_warning"):
             st.markdown(f"""
             <div class="t-alert warn">
                 <h4><i class="fas fa-triangle-exclamation"></i> Note</h4>
@@ -1415,50 +1433,7 @@ if submit:
         recs   = data.get("response", {}).get("data", {}).get("recommendations", [])
         status = data.get("response", {}).get("status", "")
 
-        if status == "off_topic":
-            # Parse the bullet-point message from data_warning
-            warning_msg = data.get("data_warning", "")
-            # Build formatted off-topic card
-            lines = warning_msg.split("\n")
-            heading   = lines[0] if lines else ""
-            bullet_lines = [l for l in lines[1:] if l.strip().startswith("•")]
-            bullets_html = "".join(
-                f'<div style="margin:0.3rem 0;font-size:0.85rem;color:var(--text-2);">'
-                f'<span style="color:var(--orange);margin-right:6px;">▸</span>{l.strip()[2:].strip()}</div>'
-                for l in bullet_lines
-            )
-            st.markdown(f"""
-            <div class="t-alert info">
-                <h4><i class="fas fa-graduation-cap"></i>&nbsp; Sirf University Queries Qubool Hain</h4>
-                <p style="margin-bottom:0.7rem;">{heading}</p>
-                <div style="background:rgba(99,102,241,0.07);border-radius:10px;padding:0.8rem 1rem;">
-                    <div style="font-size:0.72rem;font-weight:700;color:var(--indigo);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.5rem;">
-                        <i class="fas fa-lightbulb"></i>&nbsp; Aap yeh pooch sakte hain:
-                    </div>
-                    {bullets_html}
-                    <div style="margin-top:0.75rem;display:flex;flex-wrap:wrap;gap:0.4rem;">
-                        <span class="t-pill">Mere 78% hain CS mein admission chahiye</span>
-                        <span class="t-pill">Lahore mein scholarship wali uni</span>
-                        <span class="t-pill">Karachi medical college low fee</span>
-                        <span class="t-pill">Islamabad engineering hostel chahiye</span>
-                    </div>
-                </div>
-            </div>""", unsafe_allow_html=True)
-
-        elif status == "below_hec_threshold":
-            # HEC block is already shown above — just confirm no recs
-            st.markdown("""
-            <div class="t-alert warn" style="margin-top:0.5rem;">
-                <h4><i class="fas fa-info-circle"></i>&nbsp; University Recommendations Available Nahi</h4>
-                <p>
-                    Aapke marks HEC ke minimum 45% threshold se kam hain, is liye regular degree
-                    programs mein direct admission nahi ho sakta. Upar diye gaye alternative
-                    pathways zaroor dekhein — yeh aapke liye better fit hain. Marks improve karke
-                    aglay saal apply kar sakte hain!
-                </p>
-            </div>""", unsafe_allow_html=True)
-
-        elif status == "no_results" or not recs:
+        if status == "no_results" or not recs:
             st.markdown("""
             <div class="t-alert info">
                 <h4><i class="fas fa-search"></i> Koi Match Nahi Mila</h4>
