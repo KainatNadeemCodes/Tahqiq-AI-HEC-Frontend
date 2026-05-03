@@ -1329,9 +1329,26 @@ if submit:
         # API call
         try:
             if uploaded_image is not None:
+                # ── OCR path ──────────────────────────────────────────────────
+                # 1. Read bytes safely (seek to 0 first — Streamlit may have
+                #    already consumed the buffer on preview)
+                uploaded_image.seek(0)
+                img_bytes = uploaded_image.read()
+
+                # 2. Resolve MIME type — .type can be None on HF Spaces / some
+                #    browsers; fall back by extension so FastAPI gets a valid
+                #    Content-Type on the file part
+                _ext_map = {
+                    "jpg": "image/jpeg", "jpeg": "image/jpeg",
+                    "png": "image/png",  "webp": "image/webp",
+                    "gif": "image/gif",
+                }
+                _ext = (uploaded_image.name or "").rsplit(".", 1)[-1].lower()
+                mime_type = uploaded_image.type or _ext_map.get(_ext, "image/jpeg")
+
                 resp = requests.post(
                     f"{BACKEND_URL}/query/multimodal",
-                    files={"image": (uploaded_image.name, uploaded_image.getvalue(), uploaded_image.type)},
+                    files={"image": (uploaded_image.name, img_bytes, mime_type)},
                     data={
                         "query":      query_text,
                         "percentage": str(percentage) if percentage else "",
@@ -1339,7 +1356,7 @@ if submit:
                         "budget_pkr": str(int(budget_pkr)) if budget_pkr else "",
                         "field":      field_pref or "",
                     },
-                    timeout=60,
+                    timeout=90,   # HF Spaces cold-start can be slow with image
                 )
             else:
                 payload = {"query": query_text}
@@ -1394,14 +1411,23 @@ if submit:
 
         # OCR result
         ocr = data.get("ocr_result")
-        if ocr and ocr.get("marks_percent") is not None:
-            board_str = f" &nbsp;·&nbsp; Board: {ocr['board']}" if ocr.get('board') else ""
-            year_str  = f" &nbsp;·&nbsp; Year: {ocr['year']}" if ocr.get('year') else ""
-            st.markdown(f"""
-            <div class="t-alert ok">
-                <h4><i class="fas fa-camera"></i> OCR Result Extracted</h4>
-                <p>Marks detected from your image: <strong>{ocr['marks_percent']}%</strong>{board_str}{year_str}</p>
-            </div>""", unsafe_allow_html=True)
+        if ocr:
+            if ocr.get("error"):
+                st.markdown(f"""
+                <div class="t-alert err">
+                    <h4><i class="fas fa-camera-slash"></i> OCR Could Not Extract Marks</h4>
+                    <p>The image was uploaded successfully but marks could not be read automatically.
+                    Please enter your percentage manually in the field above.<br>
+                    <small style="color:var(--text-3);">Detail: {ocr['error']}</small></p>
+                </div>""", unsafe_allow_html=True)
+            elif ocr.get("marks_percent") is not None:
+                board_str = f" &nbsp;·&nbsp; Board: {ocr['board']}" if ocr.get('board') else ""
+                year_str  = f" &nbsp;·&nbsp; Year: {ocr['year']}" if ocr.get('year') else ""
+                st.markdown(f"""
+                <div class="t-alert ok">
+                    <h4><i class="fas fa-camera"></i> OCR Result Extracted</h4>
+                    <p>Marks detected from your image: <strong>{ocr['marks_percent']}%</strong>{board_str}{year_str}</p>
+                </div>""", unsafe_allow_html=True)
 
         # Data warning
         if data.get("data_warning"):
