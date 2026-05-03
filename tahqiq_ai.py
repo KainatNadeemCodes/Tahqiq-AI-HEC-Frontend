@@ -1349,13 +1349,13 @@ if submit:
                 resp = requests.post(
                     f"{BACKEND_URL}/query/multimodal",
                     files={"image": (uploaded_image.name, img_bytes, mime_type)},
-                    data={
+                    data={k: v for k, v in {
                         "query":      query_text,
-                        "percentage": str(percentage) if percentage else "",
-                        "city_pref":  city_pref or "",
-                        "budget_pkr": str(int(budget_pkr)) if budget_pkr else "",
-                        "field":      field_pref or "",
-                    },
+                        "percentage": str(float(percentage)) if percentage else None,
+                        "city_pref":  city_pref or None,
+                        "budget_pkr": str(int(budget_pkr)) if budget_pkr else None,
+                        "field":      field_pref or None,
+                    }.items() if v is not None},
                     timeout=90,   # HF Spaces cold-start can be slow with image
                 )
             else:
