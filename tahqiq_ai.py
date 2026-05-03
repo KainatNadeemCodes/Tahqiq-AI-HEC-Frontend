@@ -1244,8 +1244,53 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
+# ── Session-state defaults for OCR auto-fill ─────────────────────────────────
+# When OCR runs it writes extracted values here; on the next rerun the form
+# widgets pick them up as their default values, giving the "auto-fill" effect.
+for _k, _v in {
+    "ocr_pct":    None,   # float or None
+    "ocr_city":   "",
+    "ocr_budget": None,   # int or None
+    "ocr_field":  "",
+    "ocr_query":  "",
+    "ocr_banner": None,   # dict with display info, or None
+    "ocr_error":  None,   # str or None
+}.items():
+    if _k not in st.session_state:
+        st.session_state[_k] = _v
+
+# ── OCR auto-fill banner (shown above the form when OCR has just run) ─────────
+if st.session_state.ocr_banner:
+    b = st.session_state.ocr_banner
+    _board = f" &nbsp;·&nbsp; Board: <strong>{b['board']}</strong>" if b.get("board") else ""
+    _year  = f" &nbsp;·&nbsp; Year: <strong>{b['year']}</strong>"   if b.get("year")  else ""
+    st.markdown(f"""
+    <div class="t-alert ok" style="max-width:860px;margin:0 auto 0.5rem;padding:0.9rem 1.2rem;">
+        <h4 style="margin:0 0 0.3rem;font-size:0.95rem;">
+            <i class="fas fa-magic"></i>&nbsp; Result Card Scanned — Fields Auto-Filled!
+        </h4>
+        <p style="margin:0;font-size:0.87rem;">
+            Marks extracted: <strong>{b['marks_percent']}%</strong>{_board}{_year}
+            &nbsp;·&nbsp; Review and edit below before searching.
+        </p>
+    </div>""", unsafe_allow_html=True)
+
+if st.session_state.ocr_error:
+    st.markdown(f"""
+    <div class="t-alert warn" style="max-width:860px;margin:0 auto 0.5rem;padding:0.9rem 1.2rem;">
+        <h4 style="margin:0 0 0.3rem;font-size:0.95rem;">
+            <i class="fas fa-camera-slash"></i>&nbsp; OCR Could Not Read Marks Automatically
+        </h4>
+        <p style="margin:0;font-size:0.87rem;">
+            Please enter your percentage manually below.
+            <small style="color:var(--text-3);">&nbsp;({st.session_state.ocr_error})</small>
+        </p>
+    </div>""", unsafe_allow_html=True)
+
+# ── Form widgets — values seeded from session_state after OCR ─────────────────
 query_text = st.text_area(
     "Your question in Urdish / Urdu / English",
+    value=st.session_state.ocr_query,
     placeholder='Meri baat: "Mere 78% hain, CS mein admission lena hai, scholarship chahiye, Multan ke paas affordable university batao" — ya koi bhi bhasha mein likho',
     height=110,
     key="query_input",
@@ -1256,20 +1301,23 @@ with col1:
     percentage = st.number_input(
         "Marks / Percentage (%)",
         min_value=0.0, max_value=100.0, step=0.5,
-        value=None, format="%.1f",
+        value=st.session_state.ocr_pct,
+        format="%.1f",
         placeholder="e.g. 78.5",
         key="pct_input",
     )
 with col2:
     city_pref = st.text_input(
         "Preferred City / Region",
+        value=st.session_state.ocr_city,
         placeholder="e.g. Lahore, Multan, Karachi",
         key="city_input",
     )
 with col3:
     budget_pkr = st.number_input(
         "Max Annual Budget (PKR)",
-        min_value=0, step=5000, value=None,
+        min_value=0, step=5000,
+        value=st.session_state.ocr_budget,
         placeholder="e.g. 80000",
         key="budget_input",
     )
@@ -1278,15 +1326,71 @@ col4, col5 = st.columns([2, 1])
 with col4:
     field_pref = st.text_input(
         "Field / Degree Programme",
+        value=st.session_state.ocr_field,
         placeholder="e.g. Computer Science, Engineering, Medicine, Business",
         key="field_input",
     )
 with col5:
     uploaded_image = st.file_uploader(
-        "Result Card Image (optional OCR)",
+        "📎 Upload Result Card — Fields auto-fill!",
         type=["jpg", "jpeg", "png", "webp"],
         key="img_upload",
     )
+
+# ── OCR-on-upload: scan image as soon as it is uploaded (before submit) ───────
+if uploaded_image is not None and st.session_state.get("_last_ocr_file") != uploaded_image.name:
+    with st.spinner("🔍 Scanning result card…"):
+        try:
+            uploaded_image.seek(0)
+            _img_bytes = uploaded_image.read()
+            _ext_map   = {"jpg":"image/jpeg","jpeg":"image/jpeg",
+                          "png":"image/png","webp":"image/webp"}
+            _ext       = (uploaded_image.name or "").rsplit(".",1)[-1].lower()
+            _mime      = uploaded_image.type or _ext_map.get(_ext, "image/jpeg")
+
+            _ocr_resp  = requests.post(
+                f"{BACKEND_URL}/query/multimodal",
+                files={"image": (uploaded_image.name, _img_bytes, _mime)},
+                data={"query": "Extract marks from this result card image."},
+                timeout=60,
+            )
+            if _ocr_resp.status_code == 200:
+                _ocr_data = _ocr_resp.json()
+                _ocr      = _ocr_data.get("ocr_result") or {}
+
+                if _ocr.get("error"):
+                    st.session_state.ocr_error  = _ocr["error"]
+                    st.session_state.ocr_banner = None
+                elif _ocr.get("marks_percent") is not None:
+                    _pct = float(_ocr["marks_percent"])
+                    st.session_state.ocr_pct    = _pct
+                    st.session_state.ocr_city   = _ocr.get("city", "") or ""
+                    st.session_state.ocr_field  = _ocr.get("field", "") or ""
+                    _bud = _ocr.get("budget_pkr")
+                    st.session_state.ocr_budget = int(_bud) if _bud else None
+                    # Build a natural-language query from extracted data
+                    _qparts = [f"Mere {_pct}% hain"]
+                    if _ocr.get("field"):  _qparts.append(f"{_ocr['field']} mein admission lena hai")
+                    if _ocr.get("city"):   _qparts.append(f"{_ocr['city']} ke qareeb university chahiye")
+                    st.session_state.ocr_query  = ", ".join(_qparts)
+                    st.session_state.ocr_banner = {
+                        "marks_percent": _pct,
+                        "board": _ocr.get("board"),
+                        "year":  _ocr.get("year"),
+                    }
+                    st.session_state.ocr_error  = None
+                else:
+                    st.session_state.ocr_error  = "Marks not found in image"
+                    st.session_state.ocr_banner = None
+            else:
+                st.session_state.ocr_error  = f"Backend returned {_ocr_resp.status_code}"
+                st.session_state.ocr_banner = None
+        except Exception as _e:
+            st.session_state.ocr_error  = str(_e)
+            st.session_state.ocr_banner = None
+
+    st.session_state["_last_ocr_file"] = uploaded_image.name
+    st.rerun()
 
 submit_col, _ = st.columns([1, 3])
 with submit_col:
@@ -1329,34 +1433,28 @@ if submit:
         # API call
         try:
             if uploaded_image is not None:
-                # ── OCR path ──────────────────────────────────────────────────
-                # 1. Read bytes safely (seek to 0 first — Streamlit may have
-                #    already consumed the buffer on preview)
+                # ── Multimodal path ────────────────────────────────────────────
                 uploaded_image.seek(0)
                 img_bytes = uploaded_image.read()
-
-                # 2. Resolve MIME type — .type can be None on HF Spaces / some
-                #    browsers; fall back by extension so FastAPI gets a valid
-                #    Content-Type on the file part
-                _ext_map = {
-                    "jpg": "image/jpeg", "jpeg": "image/jpeg",
-                    "png": "image/png",  "webp": "image/webp",
-                    "gif": "image/gif",
-                }
-                _ext = (uploaded_image.name or "").rsplit(".", 1)[-1].lower()
+                _ext_map  = {"jpg":"image/jpeg","jpeg":"image/jpeg",
+                             "png":"image/png","webp":"image/webp","gif":"image/gif"}
+                _ext      = (uploaded_image.name or "").rsplit(".",1)[-1].lower()
                 mime_type = uploaded_image.type or _ext_map.get(_ext, "image/jpeg")
+
+                # Build form-data dict — OMIT keys whose value is empty / None.
+                # Sending percentage="" causes FastAPI to raise HTTP 422
+                # "Input should be a valid number, unable to parse string as a number".
+                _form: dict = {"query": query_text}
+                if percentage is not None:  _form["percentage"] = str(float(percentage))
+                if city_pref:               _form["city_pref"]  = city_pref
+                if budget_pkr is not None:  _form["budget_pkr"] = str(int(budget_pkr))
+                if field_pref:              _form["field"]       = field_pref
 
                 resp = requests.post(
                     f"{BACKEND_URL}/query/multimodal",
                     files={"image": (uploaded_image.name, img_bytes, mime_type)},
-                    data={k: v for k, v in {
-                        "query":      query_text,
-                        "percentage": str(float(percentage)) if percentage else None,
-                        "city_pref":  city_pref or None,
-                        "budget_pkr": str(int(budget_pkr)) if budget_pkr else None,
-                        "field":      field_pref or None,
-                    }.items() if v is not None},
-                    timeout=90,   # HF Spaces cold-start can be slow with image
+                    data=_form,
+                    timeout=90,
                 )
             else:
                 payload = {"query": query_text}
@@ -1406,6 +1504,10 @@ if submit:
 
         skel.empty()
         session_id = data.get("session_id", "")
+
+        # Clear OCR banners — results are now showing
+        st.session_state.ocr_banner = None
+        st.session_state.ocr_error  = None
 
         st.markdown('<div class="t-results-wrap">', unsafe_allow_html=True)
 
