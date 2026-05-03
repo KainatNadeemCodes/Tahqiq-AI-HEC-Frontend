@@ -1,6 +1,6 @@
 """
 Tahqiq.ai — tahqiq_ai.py  (v3 — Hackathon Edition)
-Streamlit Frontend · HEC Gen AI Hackathon 2025
+Streamlit Frontend · HEC Gen AI Hackathon 2026
 Har Student Ka Apna University Guide
 
 v3 Improvements:
@@ -1084,7 +1084,7 @@ st.markdown("""
 <section class="t-hero">
     <div class="t-badge">
         <i class="fas fa-shield-halved"></i>
-        Powered by 5-Agent Explainable AI &nbsp;·&nbsp; 253 HEC-Verified Universities
+        Powered by 5-Agent Explainable AI &nbsp;·&nbsp; 209 HEC-Verified Universities
     </div>
     <div style="font-size:3.2rem;margin-bottom:1.2rem;animation:float 3s ease-in-out infinite;">🎓</div>
     <h1 class="t-h1">TAHQIQ AI</h1>
