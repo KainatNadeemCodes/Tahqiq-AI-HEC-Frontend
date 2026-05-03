@@ -1165,7 +1165,7 @@ st.markdown("""
             <div class="t-feat-icon c"><i class="fa-solid fa-database"></i></div>
             <div class="t-feat-agent">Agent 2 — Data</div>
             <h3>HEC Knowledge Base</h3>
-            <p>Cross-references 253 universities on ranking, fees, scholarships, location, faculty strength, and graduate employment.</p>
+            <p>Cross-references 209 universities on ranking, fees, scholarships, location, faculty strength, and graduate employment.</p>
         </div>
         <div class="t-feat-card">
             <div class="t-feat-icon p"><i class="fa-solid fa-magnifying-glass-chart"></i></div>
