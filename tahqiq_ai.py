@@ -1312,7 +1312,7 @@ if submit:
                 <div class="t-a-step"><div class="t-a-icon"><i class="fas fa-list-check" style="color:#94a3b8"></i></div><span>Insights</span></div>
                 <div class="t-a-step"><div class="t-a-icon"><i class="fas fa-file-pdf" style="color:#94a3b8"></i></div><span>Report</span></div>
             </div>
-            <p class="t-skel-lbl">5 AI agents are analysing 253 universities for you…</p>
+            <p class="t-skel-lbl">5 AI agents are analysing 209 universities for you…</p>
             <div class="t-skel-card">
                 <span class="skel skel-h"></span><span class="skel skel-s"></span>
                 <div style="margin-top:1rem;"><span class="skel skel-b"></span><span class="skel skel-b2"></span></div>
