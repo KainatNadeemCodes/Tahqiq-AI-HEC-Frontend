@@ -1121,7 +1121,7 @@ st.markdown("""
 st.markdown("""
 <div class="t-stats">
     <div class="t-stat">
-        <div class="t-stat-n">253</div>
+        <div class="t-stat-n">209</div>
         <div class="t-stat-l">HEC-Verified Universities</div>
     </div>
     <div class="t-stat">
